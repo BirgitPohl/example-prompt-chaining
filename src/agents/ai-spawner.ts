@@ -4,7 +4,7 @@
  */
 
 import { BaseChatCompletion } from './base.js';
-import { MessageRole, type Tool, type PlanStep, type SpawnedAgent } from '../types/index.js';
+import type { Tool, PlanStep, SpawnedAgent } from '../types/index.js';
 import crypto from 'crypto';
 
 export class AISpawnerAgent {
@@ -84,19 +84,15 @@ ${toolDescriptions}
 
 Your role is to:
 1. Analyze the input provided to you
-2. Determine which tools to use and in what order
-3. Execute the tools with appropriate parameters
-4. Synthesize the results into a coherent response
+2. Determine which tools would be helpful (if any)
+3. Think through the task step by step
+4. Provide clear, actionable recommendations and insights
 
-When you need to use a tool, specify it in your response using this format:
-TOOL: <tool_name>
-PARAMS: <JSON parameters>
-
-Provide clear, actionable results based on your tool usage.`;
+Focus on providing strategic guidance and actionable recommendations for completing the task.`;
   }
 
   /**
-   * Execute an agent with tool-calling capabilities
+   * Execute an agent (simplified - tools available but not auto-executed)
    */
   private async executeAgentWithTools(
     agent: BaseChatCompletion,
@@ -104,38 +100,11 @@ Provide clear, actionable results based on your tool usage.`;
     tools: Tool[]
   ): Promise<any> {
     const result = await agent.execute(input);
-    let content = result.content;
-    const toolResults: Record<string, any> = {};
-
-    // Parse and execute any tool calls from the agent's response
-    const toolCallRegex = /TOOL:\s*(\w+)\s+PARAMS:\s*(\{[\s\S]*?\})/g;
-    let match;
-
-    while ((match = toolCallRegex.exec(content)) !== null) {
-      const [, toolName, paramsJson] = match;
-      const tool = tools.find((t) => t.name === toolName);
-
-      if (tool) {
-        try {
-          const params = JSON.parse(paramsJson);
-          const toolResult = await tool.execute(params);
-          toolResults[toolName] = toolResult;
-
-          // Update the agent with the tool result
-          await agent.execute(
-            `Tool ${toolName} executed successfully. Result: ${JSON.stringify(toolResult)}`
-          );
-        } catch (error) {
-          console.error(`Error executing tool ${toolName}:`, error);
-          toolResults[toolName] = { error: String(error) };
-        }
-      }
-    }
 
     return {
-      agentResponse: content,
-      toolResults,
-      finalResponse: agent.getHistory()[agent.getHistory().length - 1].content,
+      agentResponse: result.content,
+      toolsAvailable: tools.map((t) => t.name),
+      finalResponse: result.content,
     };
   }
 
