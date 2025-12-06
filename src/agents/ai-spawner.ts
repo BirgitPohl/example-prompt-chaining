@@ -52,7 +52,7 @@ export class AISpawnerAgent {
       {
         name: `SpecializedAgent-${planStep.step}`,
         systemPrompt,
-        model: needsWebSearch ? 'gpt-5' : 'gpt-4o',
+        model: needsWebSearch ? 'gpt-5-nano' : 'gpt-4o',
         temperature: 0.7,
         maxTokens: 2000,
       },
@@ -103,6 +103,7 @@ Focus on providing strategic guidance and actionable recommendations for complet
     input: string,
     tools: Tool[]
   ): Promise<any> {
+    console.log(`Executing agent with model: ${agent.getModel()} and tools: ${tools.map((t) => t.name).join(', ')}`);
     const result = await agent.execute(input);
 
     return {

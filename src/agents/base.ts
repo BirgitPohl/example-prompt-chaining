@@ -40,41 +40,72 @@ export class BaseChatCompletion {
     });
 
     try {
-      // Check if this model supports web search (gpt-5)
-      const supportsWebSearch = this.config.model === 'gpt-5';
+      // Check if this model supports web search (all gpt-5 variants)
+      const isGpt5Model = this.config.model?.startsWith('gpt-5');
 
-      const requestParams: any = {
-        model: this.config.model!,
-        messages: this.conversationHistory,
-        temperature: this.config.temperature,
-        max_tokens: this.config.maxTokens,
-      };
+      if (isGpt5Model) {
+        // Use Responses API for gpt-5 variants with web search
+        // Reference: https://platform.openai.com/docs/guides/tools-web-search
+        const requestParams: any = {
+          model: this.config.model!,
+          tools: [{ type: 'web_search' }],
+          input: userMessage,
+        };
 
-      // Enable web search for gpt-5
-      if (supportsWebSearch) {
-        requestParams.tools = [{ type: 'web_search' }];
+        const response = await (this.openai as any).responses.create(requestParams);
+
+        const content = response.output_text || '';
+
+        // Add assistant response to history
+        this.conversationHistory.push({
+          role: MessageRole.ASSISTANT,
+          content,
+        });
+
+        return {
+          content,
+          role: MessageRole.ASSISTANT,
+          metadata: {
+            model: this.config.model!,
+            webSearchUsed: true,
+          },
+        };
+      } else {
+        // Use ChatCompletions API for other models
+        const requestParams: any = {
+          model: this.config.model!,
+          messages: this.conversationHistory,
+          temperature: this.config.temperature,
+        };
+
+        // Use max_completion_tokens for gpt-4o and newer, max_tokens for older models
+        if (this.config.model?.startsWith('gpt-4o')) {
+          requestParams.max_completion_tokens = this.config.maxTokens;
+        } else {
+          requestParams.max_tokens = this.config.maxTokens;
+        }
+
+        const response = await this.openai.chat.completions.create(requestParams);
+
+        const assistantMessage = response.choices[0].message;
+
+        // Add assistant response to history
+        this.conversationHistory.push({
+          role: MessageRole.ASSISTANT,
+          content: assistantMessage.content || '',
+        });
+
+        return {
+          content: assistantMessage.content || '',
+          role: MessageRole.ASSISTANT,
+          metadata: {
+            model: response.model,
+            usage: response.usage,
+            finishReason: response.choices[0].finish_reason,
+            webSearchUsed: false,
+          },
+        };
       }
-
-      const response = await this.openai.chat.completions.create(requestParams);
-
-      const assistantMessage = response.choices[0].message;
-
-      // Add assistant response to history
-      this.conversationHistory.push({
-        role: MessageRole.ASSISTANT,
-        content: assistantMessage.content || '',
-      });
-
-      return {
-        content: assistantMessage.content || '',
-        role: MessageRole.ASSISTANT,
-        metadata: {
-          model: response.model,
-          usage: response.usage,
-          finishReason: response.choices[0].finish_reason,
-          webSearchUsed: supportsWebSearch,
-        },
-      };
     } catch (error) {
       console.error(`Error in ${this.config.name}:`, error);
       throw error;
@@ -100,5 +131,12 @@ export class BaseChatCompletion {
    */
   getName(): string {
     return this.config.name;
+  }
+
+  /**
+   * Get agent name
+   */
+  getModel(): string {
+    return this.config.model!;
   }
 }
