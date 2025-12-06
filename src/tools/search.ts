@@ -1,12 +1,12 @@
 /**
- * Search tool - simulates searching for information
+ * Search tool - uses OpenAI web search
  */
 
 import type { Tool } from '../types/index.js';
 
 export const searchTool: Tool = {
   name: 'search',
-  description: 'Search for information on a given topic',
+  description: 'Search the web for real-time information on a given topic using OpenAI web search',
   parameters: {
     type: 'object',
     properties: {
@@ -14,32 +14,16 @@ export const searchTool: Tool = {
         type: 'string',
         description: 'The search query',
       },
-      maxResults: {
-        type: 'number',
-        description: 'Maximum number of results to return',
-        default: 5,
-      },
     },
     required: ['query'],
   },
-  execute: async (args: { query: string; maxResults?: number }) => {
-    // Simulate search delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
+  execute: async (args: { query: string }) => {
+    // This tool is now a marker that indicates web search capability is needed
+    // The actual search is performed by the agent using OpenAI's web_search feature
     return {
       query: args.query,
-      results: [
-        {
-          title: `Result 1 for "${args.query}"`,
-          snippet: 'This is a simulated search result with relevant information...',
-          url: 'https://example.com/result1',
-        },
-        {
-          title: `Result 2 for "${args.query}"`,
-          snippet: 'Another relevant piece of information about the topic...',
-          url: 'https://example.com/result2',
-        },
-      ].slice(0, args.maxResults || 5),
+      message: 'Web search capability available - agent will use OpenAI web search',
+      requiresWebSearch: true,
     };
   },
 };

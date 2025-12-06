@@ -41,14 +41,18 @@ export class AISpawnerAgent {
       .map((toolName) => this.toolRegistry.get(toolName))
       .filter((tool): tool is Tool => tool !== undefined);
 
+    // Check if this agent needs web search capability
+    const needsWebSearch = tools.some((tool) => tool.name === 'search');
+
     // Create the system prompt for this specialized agent
     const systemPrompt = this.generateSystemPrompt(planStep, tools);
 
-    // Create the base agent
+    // Create the base agent with appropriate model - USE GPT-5 FOR WEB SEARCH!
     const baseAgent = new BaseChatCompletion(
       {
         name: `SpecializedAgent-${planStep.step}`,
         systemPrompt,
+        model: needsWebSearch ? 'gpt-5' : 'gpt-4o',
         temperature: 0.7,
         maxTokens: 2000,
       },

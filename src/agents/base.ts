@@ -40,12 +40,22 @@ export class BaseChatCompletion {
     });
 
     try {
-      const response = await this.openai.chat.completions.create({
+      // Check if this model supports web search (gpt-5)
+      const supportsWebSearch = this.config.model === 'gpt-5';
+
+      const requestParams: any = {
         model: this.config.model!,
         messages: this.conversationHistory,
         temperature: this.config.temperature,
         max_tokens: this.config.maxTokens,
-      });
+      };
+
+      // Enable web search for gpt-5
+      if (supportsWebSearch) {
+        requestParams.tools = [{ type: 'web_search' }];
+      }
+
+      const response = await this.openai.chat.completions.create(requestParams);
 
       const assistantMessage = response.choices[0].message;
 
@@ -62,6 +72,7 @@ export class BaseChatCompletion {
           model: response.model,
           usage: response.usage,
           finishReason: response.choices[0].finish_reason,
+          webSearchUsed: supportsWebSearch,
         },
       };
     } catch (error) {
