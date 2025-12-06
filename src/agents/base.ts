@@ -12,6 +12,7 @@ export class BaseChatCompletion {
 
   constructor(config: AgentConfig, apiKey?: string) {
     this.config = {
+      model: 'gpt-4o',
       temperature: 0.7,
       maxTokens: 1000,
       ...config,
