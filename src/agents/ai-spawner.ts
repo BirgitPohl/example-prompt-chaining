@@ -3,8 +3,10 @@
  * Dynamically spawns specialized agents based on plan requirements
  */
 
-import { BaseChatCompletion } from './base.js';
+import { OpenAIProvider } from '../providers/openai-provider.js';
+import { AnthropicProvider } from '../providers/anthropic-provider.js';
 import type { Tool, PlanStep, SpawnedAgent } from '../types/index.js';
+import type { IAIProvider } from '../types/providers.js';
 import crypto from 'crypto';
 
 export class AISpawnerAgent {
@@ -47,17 +49,33 @@ export class AISpawnerAgent {
     // Create the system prompt for this specialized agent
     const systemPrompt = this.generateSystemPrompt(planStep, tools);
 
-    // Create the base agent with appropriate model - USE GPT-5 FOR WEB SEARCH!
-    const baseAgent = new BaseChatCompletion(
-      {
-        name: `SpecializedAgent-${planStep.step}`,
+    // Create the appropriate provider-based agent
+    // Use Claude with web search for search tasks, OpenAI for everything else
+    let agent: IAIProvider;
+
+    if (needsWebSearch) {
+      // Use Anthropic Claude with web search enabled
+      // Note: Uses ANTHROPIC_API_KEY from environment (not this.apiKey which is OpenAI)
+      agent = new AnthropicProvider(
+        `SpecializedAgent-${planStep.step}`,
         systemPrompt,
-        model: needsWebSearch ? 'gpt-5-nano' : 'gpt-4o',
-        temperature: 0.7,
-        maxTokens: 2000,
-      },
-      this.apiKey
-    );
+        'claude-sonnet-4-5',
+        2000,
+        true, // web search enabled
+        process.env.ANTHROPIC_API_KEY
+      );
+      console.log(`Creating Claude agent with web search for: ${planStep.description}`);
+    } else {
+      // Use OpenAI for non-search tasks
+      agent = new OpenAIProvider(
+        `SpecializedAgent-${planStep.step}`,
+        systemPrompt,
+        'gpt-4o',
+        0.7,
+        2000,
+        this.apiKey
+      );
+    }
 
     // Return the spawned agent with its execution function
     return {
@@ -66,7 +84,7 @@ export class AISpawnerAgent {
       purpose: planStep.description,
       tools,
       execute: async (input: string) => {
-        return await this.executeAgentWithTools(baseAgent, input, tools);
+        return await this.executeAgentWithTools(agent, input, tools);
       },
     };
   }
@@ -99,17 +117,18 @@ Focus on providing strategic guidance and actionable recommendations for complet
    * Execute an agent (simplified - tools available but not auto-executed)
    */
   private async executeAgentWithTools(
-    agent: BaseChatCompletion,
+    agent: IAIProvider,
     input: string,
     tools: Tool[]
   ): Promise<any> {
-    console.log(`Executing agent with model: ${agent.getModel()} and tools: ${tools.map((t) => t.name).join(', ')}`);
+    console.log(`Executing agent: ${agent.getName()} with model: ${agent.getModel()} and tools: ${tools.map((t) => t.name).join(', ')}`);
     const result = await agent.execute(input);
 
     return {
       agentResponse: result.content,
       toolsAvailable: tools.map((t) => t.name),
       finalResponse: result.content,
+      metadata: result.metadata,
     };
   }
 

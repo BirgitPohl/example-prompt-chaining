@@ -47,11 +47,7 @@ npm install
 
 ## Configuration
 
-Create a `.env` file:
-
-```
-OPENAI_API_KEY=your_api_key_here
-```
+Create a `.env` file use env.example for reference.
 
 ## Usage
 
