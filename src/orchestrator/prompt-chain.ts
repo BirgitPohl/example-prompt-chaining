@@ -5,6 +5,7 @@ import { AISpawnerAgent } from '../agents/ai-spawner.js';
 import { ResponderAgent } from '../agents/responder.js';
 import { toolRegistry } from '../tools/index.js';
 import type { AgentContext, ChainStep } from '../types/index.js';
+import { awesomeDebugger, ChalkColors } from '../utils/debug.js';
 
 /**
  * Prompt Chain Orchestrator
@@ -31,7 +32,7 @@ export class PromptChainOrchestrator {
    * Process a user query through the entire prompt chain
    */
   async processQuery(userQuery: string): Promise<string> {
-    console.log('\n🚀 Starting Prompt Chain Processing...\n');
+    awesomeDebugger('\n🚀 Starting Prompt Chain Processing...\n', ChalkColors.Cyan, 'bold');
 
     // Initialize context
     const context: AgentContext = {
@@ -41,43 +42,43 @@ export class PromptChainOrchestrator {
 
     try {
       // Step 1: Summarize the query
-      console.log('📝 Step 1: Summarizing query...');
+      awesomeDebugger('📝 Step 1: Summarizing query...', ChalkColors.Blue);
       const summary = await this.summarizer.summarize(userQuery);
       context.summary = summary;
       this.recordStep('Summarizer', userQuery, summary);
-      console.log(`✓ Summary generated: ${summary.substring(0, 100)}...\n`);
+      awesomeDebugger(`✓ Summary generated: ${summary.substring(0, 100)}...\n`, ChalkColors.Green);
 
       // Step 2: Identify pain points
-      console.log('🔍 Step 2: Identifying pain points...');
+      awesomeDebugger('🔍 Step 2: Identifying pain points...', ChalkColors.Blue);
       const painPoints = await this.painIdentifier.identifyPainPoints(summary);
       context.painPoints = painPoints;
       this.recordStep('PainIdentifier', summary, painPoints.join('\n'));
-      console.log(`✓ Identified ${painPoints.length} pain points:\n`);
-      painPoints.forEach((point, idx) => console.log(`   ${idx + 1}. ${point}`));
-      console.log('');
+      awesomeDebugger(`✓ Identified ${painPoints.length} pain points:\n`, ChalkColors.Green);
+      painPoints.forEach((point, idx) => awesomeDebugger(`   ${idx + 1}. ${point}`, ChalkColors.Yellow));
+      awesomeDebugger('');
 
       // Step 3: Create execution plan
-      console.log('📋 Step 3: Creating execution plan...');
+      awesomeDebugger('📋 Step 3: Creating execution plan...', ChalkColors.Blue);
       const planSteps = await this.planCreator.createPlan(painPoints);
       context.plan = JSON.stringify(planSteps, null, 2);
       this.recordStep('PlanCreator', painPoints.join('\n'), context.plan);
-      console.log(`✓ Created plan with ${planSteps.length} steps:\n`);
+      awesomeDebugger(`✓ Created plan with ${planSteps.length} steps:\n`, ChalkColors.Green);
       planSteps.forEach((step) => {
-        console.log(`   ${step.step}. ${step.description} (${step.estimatedComplexity})`);
+        awesomeDebugger(`   ${step.step}. ${step.description} (${step.estimatedComplexity})`, ChalkColors.Cyan);
       });
-      console.log('');
+      awesomeDebugger('');
 
       // Step 4: Spawn specialized agents
-      console.log('🤖 Step 4: Spawning specialized agents...');
+      awesomeDebugger('🤖 Step 4: Spawning specialized agents...', ChalkColors.Blue);
       const spawnedAgents = await this.aiSpawner.spawnAgents(planSteps);
-      console.log(`✓ Spawned ${spawnedAgents.length} specialized agents\n`);
+      awesomeDebugger(`✓ Spawned ${spawnedAgents.length} specialized agents\n`, ChalkColors.Green);
 
       // Step 5: Execute spawned agents
-      console.log('⚡ Step 5: Executing specialized agents...');
+      awesomeDebugger('⚡ Step 5: Executing specialized agents...', ChalkColors.Blue);
       const agentResults = [];
       for (let i = 0; i < spawnedAgents.length; i++) {
         const agent = spawnedAgents[i];
-        console.log(`   Executing ${agent.name}: ${agent.purpose}`);
+        awesomeDebugger(`   Executing ${agent.name}: ${agent.purpose}`, ChalkColors.Magenta);
 
         try {
           const result = await agent.execute(
@@ -85,25 +86,25 @@ export class PromptChainOrchestrator {
           );
           agentResults.push(result);
           this.recordStep(agent.name, agent.purpose, JSON.stringify(result, null, 2));
-          console.log(`   ✓ ${agent.name} completed`);
+          awesomeDebugger(`   ✓ ${agent.name} completed`, ChalkColors.Green);
         } catch (error) {
-          console.error(`   ✗ ${agent.name} failed:`, error);
+          awesomeDebugger(`   ✗ ${agent.name} failed: ${error}`, ChalkColors.Red);
           agentResults.push({ error: String(error) });
         }
       }
-      console.log('');
+      awesomeDebugger('');
 
       // Step 6: Generate final response
-      console.log('💬 Step 6: Generating final response...');
+      awesomeDebugger('💬 Step 6: Generating final response...', ChalkColors.Blue);
       const finalResponse = await this.responder.generateResponse(context, agentResults);
       this.recordStep('Responder', 'All agent results', finalResponse);
-      console.log('✓ Final response generated\n');
+      awesomeDebugger('✓ Final response generated\n', ChalkColors.Green);
 
-      console.log('✅ Prompt Chain Processing Complete!\n');
+      awesomeDebugger('✅ Prompt Chain Processing Complete!\n', ChalkColors.Green, 'bold');
 
       return finalResponse;
     } catch (error) {
-      console.error('❌ Error in prompt chain:', error);
+      awesomeDebugger(`❌ Error in prompt chain: ${error}`, ChalkColors.Red, 'bold');
       throw error;
     }
   }
