@@ -17,6 +17,7 @@ export class PromptChainOrchestrator {
   private planCreator: PlanCreatorAgent;
   private aiSpawner: AISpawnerAgent;
   private responder: ResponderAgent;
+  // TODO
   private apiKey?: string;
 
   constructor(apiKey?: string) {
